@@ -7,6 +7,7 @@
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <RootNamespace>Reko.UnitTests</RootNamespace>
     <AssemblyName>Reko.UnitTests</AssemblyName>
+    <SolutionDir>$(ProjectDir)..\</SolutionDir>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Arch\Alpha\Alpha.csproj" />
@@ -34,15 +35,12 @@
     <ProjectReference Include="..\Arch\Z80\Z80.csproj" />
     <ProjectReference Include="..\Arch\zSeries\zSeries.csproj" />
 
-
     <ProjectReference Include="..\Assemblers\M68k\M68kAssembler.csproj" />
     <ProjectReference Include="..\Assemblers\Pdp11\Pdp11Assembler.csproj" />
     <ProjectReference Include="..\Assemblers\x86\X86Assembler.csproj" />
 
-
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Decompiler\Decompiler.csproj" />
-
 
     <ProjectReference Include="..\Environments\AmigaOS\AmigaOS.csproj" />
     <ProjectReference Include="..\Environments\AtariTOS\AtariTOS.csproj" />
@@ -62,9 +60,7 @@
     <ProjectReference Include="..\Environments\Windows\Windows.csproj" />
     <ProjectReference Include="..\Environments\ZX81\ZX81.csproj" />
 
-
     <ProjectReference Include="..\Gui\Gui.csproj" />
-
 
     <ProjectReference Include="..\ImageLoaders\BinHex\BinHex.csproj" />
     <ProjectReference Include="..\ImageLoaders\Coff\Coff.csproj" />
@@ -123,9 +119,10 @@
   <ItemGroup>
     <PackageReference Include="Moq" Version="4.10.1" />
     <PackageReference Include="NUnit" Version="3.11.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.13.0" />
   </ItemGroup>
-  <Target Name="AfterBuild">
-    <Message Importance="normal" Text="Copying Decompiler metadata files to $(TargetDir)" />
+  <Target Name="CopyAllTheFiles" AfterTargets="CopyFilesToOutputDirectory">
+    <Message Importance="high" Text="AWOOGA Copying Decompiler metadata files to $(TargetDir)" />
     <Copy SourceFiles="@(Architectures)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(DecompilerMetadata)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(ExternalComponents)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />

@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.0;net472;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net472;netcoreapp2.0</TargetFrameworks>
     <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <ApplicationIcon />
@@ -9,12 +9,12 @@
     <StartupObject />
     <RootNamespace>Decompiler.Tools.C2Xml</RootNamespace>
     <AssemblyName>c2xml</AssemblyName>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.11.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.13.0" />
+    <PackageReference Include="Microsoft.NET.Test.SDK" Version="15.9.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,12 +35,4 @@
     <Copy SourceFiles="$(SolutionDir)..\external\docopt.net-0.6.1.4\DocoptNet.dll" DestinationFolder="$(SolutionDir)tools" />
     <Copy SourceFiles="@(ConfigurationFiles)" DestinationFolder="$(SolutionDir)tools" SkipUnchangedFiles="true" />
   </Target>
-
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\NUnit.3.11.0\build\NUnit.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\NUnit.3.11.0\build\NUnit.props'))" />
-  </Target>
-  
 </Project>
