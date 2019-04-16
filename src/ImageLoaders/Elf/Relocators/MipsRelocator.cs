@@ -134,7 +134,7 @@ namespace Reko.ImageLoaders.Elf.Relocators
 
             var addrGot = Address.Ptr32(uAddrBeginningOfGot);
             var addrLocalGotEnd = addrGot + numberoflocalPointers * PointerByteSize;
-            loader.ConstructGotEntries(program, symbols, addrGot, addrLocalGotEnd);
+            loader.ConstructGotEntries(program, symbols, addrGot, addrLocalGotEnd, true);
         }
 
         /// <summary>
@@ -170,7 +170,11 @@ namespace Reko.ImageLoaders.Elf.Relocators
                     ImageSymbol symGotEntry = loader.CreateGotSymbol(addrGot, symbol.Name);
                     symbols[addrGot] = symGotEntry;
                     Debug.Print("Found GOT entry at {0}, changing symbol at {1}", symGotEntry, addrGot);
-                    program.ImportReferences[addrGot] = new NamedImportReference(addrGot, null, symbol.Name);
+                    var st = ElfLoader.GetSymbolType(symbol);
+                    if (st.HasValue)
+                    {
+                        program.ImportReferences[addrGot] = new NamedImportReference(addrGot, null, symbol.Name, st.Value);
+                    }
                 }
             }
         }
@@ -208,6 +212,9 @@ namespace Reko.ImageLoaders.Elf.Relocators
             case MIPSrt.R_MIPS_NONE: return symbol;
             case MIPSrt.R_MIPS_REL32:
                 break;
+                default:
+                    mask = 0;
+                    break;
                 /*
                 R_MIPS_NONE      0  none     local    none
                 R_MIPS_16        1  V–half16 external S + sign–extend(A)

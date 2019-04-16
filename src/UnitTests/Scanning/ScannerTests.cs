@@ -377,9 +377,9 @@ namespace Reko.UnitTests.Scanning
 // Return size: 2
 void fn0C00_0000()
 fn0C00_0000_entry:
+	sp = fp
 	// succ:  l0C00_0000
 l0C00_0000:
-	sp = fp
 	ax = 0x0000
 	// succ:  l0C00_0003
 l0C00_0003:
@@ -414,7 +414,8 @@ fn0C00_0000_exit:
                 new NamedImportReference(
                     Address.Ptr32(0x2000),
                     "module",
-                    "grox"));
+                    "grox",
+                    SymbolType.ExternalProcedure));
             Given_Trace(new RtlTrace(0x2000) {
                     m => m.SideEffect(m.Word32(0x1234))
             });
@@ -495,8 +496,8 @@ fn0C00_0000_exit:
 // Return size: 0
 void fn00001000()
 fn00001000_entry:
-l00001000:
 	r63 = fp
+l00001000:
 	r1 = 0x00000000
 l00001004:
 	Mem0[0x00001800:word32] = r1
@@ -507,12 +508,12 @@ fn00001000_exit:
 // Return size: 0
 void fn00001100()
 fn00001100_entry:
+	r63 = fp
 	goto l00001100
 l00001004_in_fn00001100:
 	Mem0[0x00001800:word32] = r1
 	return
 l00001100:
-	r63 = fp
 	r1 = 0x00000001
 	goto l00001004_in_fn00001100
 fn00001100_exit:
@@ -551,9 +552,9 @@ fn00001100_exit:
 // Return size: 0
 void fn00001000()
 fn00001000_entry:
+	r63 = fp
 	// succ:  l00001000
 l00001000:
-	r63 = fp
 	r1 = 0x00000000
 	// succ:  l00001004
 l00001004:
@@ -586,7 +587,7 @@ fn00001000_exit:
             });
             program.ImportReferences.Add(
                 Address.Ptr32(0x2000),
-                new NamedImportReference(Address.Ptr32(0x2000), "foo.dll", "bar"));
+                new NamedImportReference(Address.Ptr32(0x2000), "foo.dll", "bar", SymbolType.ExternalProcedure));
 
             var proc = scan.ScanProcedure(arch, Address.Ptr32(0x1000), "fn1000", arch.CreateProcessorState());
 
@@ -745,8 +746,8 @@ fn00001000_exit:
 // Return size: 4
 void fn1000()
 fn1000_entry:
-l00001000:
 	r63 = fp
+l00001000:
 	r1 = 0x00000003
 	r63 = r63 - 0x00000004
 	Mem0[r63:word32] = r1
@@ -764,8 +765,8 @@ fn1000_exit:
 // Return size: 0
 void fn00001100()
 fn00001100_entry:
-l00001100:
 	r63 = fp
+l00001100:
 	r1 = Mem0[r63 + 0x00000004:word32]
 	branch r1 == 0x00000000 l00001120
 	goto l00001108
@@ -787,8 +788,8 @@ fn00001100_exit:
 // Return size: 0
 void fn00001200()
 fn00001200_entry:
-l00001200:
 	r63 = fp
+l00001200:
 	r1 = Mem0[r63 + 0x00000004:word32]
 	branch r1 == 0x00000000 l00001220
 l00001208:

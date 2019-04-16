@@ -20,6 +20,7 @@
 
 using Reko.Core;
 using Reko.Core.Lib;
+using Reko.Core.Machine;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,7 +32,6 @@ namespace Reko.Arch.Arm.AArch32
 {
     public partial class A32Disassembler
     {
-
         public abstract class Decoder
         {
             public abstract AArch32Instruction Decode(uint wInstr, A32Disassembler dasm);
@@ -166,6 +166,7 @@ namespace Reko.Arch.Arm.AArch32
 
             public override AArch32Instruction Decode(uint wInstr, A32Disassembler dasm)
             {
+                Debug.Print("NYI: {0}", message);
                 return dasm.NotYetImplemented(message, wInstr);
             }
 
@@ -180,9 +181,9 @@ namespace Reko.Arch.Arm.AArch32
             private readonly Opcode opcode;
             private readonly InstrClass iclass;
             private readonly ArmVectorData vectorData;
-            private readonly Func<uint, A32Disassembler, bool>[] mutators;
+            private readonly Mutator<A32Disassembler>[] mutators;
 
-            public InstrDecoder(Opcode opcode, InstrClass iclass, ArmVectorData vectorData, params Func<uint, A32Disassembler, bool>[] mutators)
+            public InstrDecoder(Opcode opcode, InstrClass iclass, ArmVectorData vectorData, params Mutator<A32Disassembler>[] mutators)
             {
                 this.opcode = opcode;
                 this.iclass = iclass;

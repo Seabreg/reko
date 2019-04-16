@@ -275,37 +275,46 @@ namespace Reko.ImageLoaders.Elf
         {
             { ElfSymbolType.STT_FUNC, SymbolType.Procedure },
             { ElfSymbolType.STT_OBJECT, SymbolType.Data },
+            { ElfSymbolType.STT_NOTYPE, SymbolType.Unknown },
         };
 
         public ImageSymbol CreateImageSymbol(ElfSymbol sym, bool isExecutable)
         {
             if (!isExecutable && sym.SectionIndex > 0 && sym.SectionIndex >= Sections.Count)
                 return null;
-            if (!mpSymbolType.TryGetValue(sym.Type, out SymbolType st))
+            SymbolType? st = GetSymbolType(sym);
+            if (st == null || st.Value == SymbolType.Unknown)
                 return null;
-            if (sym.SectionIndex == 0)
-            {
-                if (st != SymbolType.Procedure)
-                    return null;
-                st = SymbolType.ExternalProcedure;
-            }
             // If this is a relocatable file, the symbol value is 
             // an offset from the section's virtual address. 
             // If this is an executable file, the symbol value is
             // the virtual address.
             var addr = isExecutable
                 ? platform.MakeAddressFromLinear(sym.Value)
-                : Sections[(int)sym.SectionIndex].Address + sym.Value;
+                : Sections[(int) sym.SectionIndex].Address + sym.Value;
 
             var dt = GetSymbolDataType(sym);
             var imgSym = ImageSymbol.Create(
-                st,
+                st.Value,
                 this.Architecture,
                 addr,
                 sym.Name,
                 dt);
             imgSym.ProcessorState = Architecture.CreateProcessorState();
             return imgSym;
+        }
+
+        public static SymbolType? GetSymbolType(ElfSymbol sym)
+        {
+            if (!mpSymbolType.TryGetValue(sym.Type, out var st))
+                return null;
+            if (sym.SectionIndex == 0)
+            {
+                if (st != SymbolType.Procedure && st != SymbolType.Unknown)
+                    return null;
+                st = SymbolType.ExternalProcedure;
+            }
+            return st;
         }
 
         private DataType GetSymbolDataType(ElfSymbol sym)
@@ -484,7 +493,7 @@ namespace Reko.ImageLoaders.Elf
 
             var gotStart = got.Address;
             var gotEnd = got.EndAddress;
-            ConstructGotEntries(program, symbols, gotStart, gotEnd);
+            ConstructGotEntries(program, symbols, gotStart, gotEnd, false);
         }
 
         /// <summary>
@@ -496,9 +505,9 @@ namespace Reko.ImageLoaders.Elf
         /// <param name="symbols"></param>
         /// <param name="gotStart"></param>
         /// <param name="gotEnd"></param>
-        public void ConstructGotEntries(Program program, SortedList<Address, ImageSymbol> symbols, Address gotStart, Address gotEnd)
+        public void ConstructGotEntries(Program program, SortedList<Address, ImageSymbol> symbols, Address gotStart, Address gotEnd, bool makeGlobals)
         {
-            Debug.Print("== Constructing GOT entries ==");
+            DebugEx.Verbose(ElfImageLoader.trace, "== Constructing GOT entries ==");
             var rdr = program.CreateImageReader(program.Architecture, gotStart);
             while (rdr.Address < gotEnd)
             {
@@ -513,13 +522,37 @@ namespace Reko.ImageLoaders.Elf
                     {
                         ImageSymbol gotSym = CreateGotSymbol(addrGot, symbol.Name);
                         symbols[addrGot] = gotSym;
-                        DebugEx.PrintIf(ElfImageLoader.trace.TraceVerbose, "{0}+{1:X4}: Found GOT entry {2}, referring to symbol at {3}", 
-                            gotStart, addrGot-gotStart, gotSym, symbol);
-                            program.ImportReferences.Add(addrGot, new NamedImportReference(addrGot, null, symbol.Name));
+                        DebugEx.Verbose(ElfImageLoader.trace, "{0}+{1:X4}: Found GOT entry {2}, referring to symbol at {3}",
+                            gotStart, addrGot - gotStart, gotSym, symbol);
+                        if (symbol.Type == SymbolType.ExternalProcedure)
+                        {
+                            program.ImportReferences.Add(
+                                addrGot,
+                                new NamedImportReference(
+                                    addrGot,
+                                    null,
+                                    symbol.Name,
+                                    symbol.Type));
                         }
                     }
                 }
+                else if (makeGlobals)
+                {
+                    // This GOT entry has no corresponding symbol. It's likely a global
+                    // variable with no name.
+                    ImageSymbol gotDataSym = ImageSymbol.Create(SymbolType.Data, this.Architecture, addrGot);
+                    DebugEx.Verbose(ElfImageLoader.trace, "{0}+{1:X4}: GOT entry with no symbol, assuming local data {2}",
+                        gotStart, addrGot - gotStart, addrGot);
+                    program.ImportReferences.Add(
+                        addrGot,
+                        new NamedImportReference(
+                            addrGot,
+                            null,
+                            null,
+                            gotDataSym.Type));
+                }
             }
+        }
 
         public ImageSymbol CreateGotSymbol(Address addrGot, string name)
         {
@@ -968,7 +1001,7 @@ namespace Reko.ImageLoaders.Elf
                         (uint)p.p_pmemsz)));
             foreach (var ph in Segments)
             {
-                Debug.Print("ph: addr {0:X8} filesize {0:X8} memsize {0:X8}", ph.p_vaddr, ph.p_filesz, ph.p_pmemsz);
+                DebugEx.Inform(ElfImageLoader.trace, "ph: addr {0:X8} filesize {0:X8} memsize {0:X8}", ph.p_vaddr, ph.p_filesz, ph.p_pmemsz);
                 if (!IsLoadable(ph.p_pmemsz, ph.p_type))
                     continue;
                 var vaddr = platform.MakeAddressFromLinear(ph.p_vaddr);
@@ -1332,7 +1365,7 @@ namespace Reko.ImageLoaders.Elf
 
                 uint sym = info >> 8;
                 string symStr = GetStrPtr(symtab, sym);
-                DebugEx.PrintIf(ElfImageLoader.trace.TraceVerbose, "  RELA {0:X8} {1,3} {2:X8} {3:X8} {4}", offset, info & 0xFF, sym, addend, symStr);
+                DebugEx.Verbose(ElfImageLoader.trace, "  RELA {0:X8} {1,3} {2:X8} {3:X8} {4}", offset, info & 0xFF, sym, addend, symStr);
             }
         }
 
@@ -1423,7 +1456,7 @@ namespace Reko.ImageLoaders.Elf
 
             foreach (var ph in Segments)
             {
-                Debug.Print("ph: addr {0:X8} filesize {0:X8} memsize {0:X8}", ph.p_vaddr, ph.p_filesz, ph.p_pmemsz);
+                DebugEx.Inform(ElfImageLoader.trace, "ph: addr {0:X8} filesize {0:X8} memsize {0:X8}", ph.p_vaddr, ph.p_filesz, ph.p_pmemsz);
                 if (!IsLoadable(ph.p_pmemsz, ph.p_type))
                     continue;
                 var vaddr = Address.Ptr32((uint)ph.p_vaddr);

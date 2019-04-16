@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 /* 
  * Copyright (C) 1999-2019 John Källén.
  *
@@ -58,6 +58,9 @@ namespace Reko.Arch.Vax
             Registers.pc,
         };
 
+        private static Dictionary<string, RegisterStorage> regsByName = regs
+            .ToDictionary(r => r.Name);
+
         private Dictionary<uint, FlagGroupStorage> flagGroups;
 
         public VaxArchitecture(string name) : base(name)
@@ -67,6 +70,7 @@ namespace Reko.Arch.Vax
             this.FramePointerType = PrimitiveType.Ptr32;
             this.WordWidth = PrimitiveType.Word32;
             this.PointerType = PrimitiveType.Ptr32;
+            this.StackRegister = Registers.sp;
             this.flagGroups = new Dictionary<uint, FlagGroupStorage>();
         }
 
@@ -167,7 +171,7 @@ namespace Reko.Arch.Vax
 
         public override RegisterStorage[] GetRegisters()
         {
-            throw new NotImplementedException();
+            return regs;
         }
 
         //$REVIEW: shouldn't this be flaggroup?
@@ -201,7 +205,7 @@ namespace Reko.Arch.Vax
 
         public override bool TryGetRegister(string name, out RegisterStorage reg)
         {
-            throw new NotImplementedException();
+            return regsByName.TryGetValue(name, out reg);
         }
 
         public override bool TryParseAddress(string txtAddr, out Address addr)

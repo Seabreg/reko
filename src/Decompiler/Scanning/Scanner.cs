@@ -64,7 +64,7 @@ namespace Reko.Scanning
         private SegmentMap segmentMap;
         private ImageMap imageMap;
         private IImportResolver importResolver;
-        private SortedList<Address, BlockRange> blocks;
+        private BTreeDictionary<Address, BlockRange> blocks;
         private Dictionary<Block, Address> blockStarts;
         private Dictionary<Address, ImportReference> importReferences;
         private HashSet<Procedure> visitedProcs;
@@ -92,7 +92,7 @@ namespace Reko.Scanning
             }
             this.imageMap = program.ImageMap;
             this.procQueue = new PriorityQueue<WorkItem>();
-            this.blocks = new SortedList<Address, BlockRange>();
+            this.blocks = new BTreeDictionary<Address, BlockRange>();
             this.blockStarts = new Dictionary<Block, Address>();
             this.importReferences = program.ImportReferences;
             this.visitedProcs = new HashSet<Procedure>();
@@ -295,7 +295,8 @@ namespace Reko.Scanning
                     // We just created a block in a foreign procedure. 
                     blocks.Remove(addrDest);
                     block.Procedure.RemoveBlock(block);
-                    procDest = (Procedure)ScanProcedure(block.Procedure.Architecture, addrDest, null, state);
+                    procDest = Program.EnsureProcedure(block.Procedure.Architecture, addrDest, null);
+                    EnqueueProcedure(block.Procedure.Architecture, addrDest);
                     var blockThunk = CreateCallRetThunk(addrSrc, proc, procDest);
                     var wi = CreatePromoteWorkItem(addrDest, block, procDest);
                     procQueue.Enqueue(PriorityBlockPromote, wi);
@@ -576,16 +577,15 @@ namespace Reko.Scanning
         }
 
         /// <summary>
-        /// Inject statements into the starting block that establish the frame,
+        /// Inject statements into the entry block that establish the frame,
         /// and if the procedure has been given a valid signature already,
         /// copy the input arguments into their local counterparts.
         /// </summary>
         /// <param name="addr"></param>
         /// <param name="proc"></param>
-        /// <param name="sp"></param>
         public void InjectProcedureEntryInstructions(Address addr, Procedure proc)
         {
-            var bb = new StatementInjector(proc, proc.EntryBlock.Succ[0], addr);
+            var bb = new StatementInjector(proc, proc.EntryBlock, addr);
             var sp = proc.Frame.EnsureRegister(proc.Architecture.StackRegister);
             bb.Assign(sp, proc.Frame.FramePointer);
             Program.Platform.InjectProcedureEntryStatements(proc, addr, bb);

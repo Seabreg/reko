@@ -29,8 +29,8 @@ namespace Reko.UnitTests.Arch.Z80
     [TestFixture]
     class RewriterTests : RewriterTestBase
     {
-        private Z80ProcessorArchitecture arch = new Z80ProcessorArchitecture("z80");
-        private Address baseAddr = Address.Ptr16(0x0100);
+        private readonly Z80ProcessorArchitecture arch = new Z80ProcessorArchitecture("z80");
+        private readonly Address baseAddr = Address.Ptr16(0x0100);
         private MemoryArea image;
 
         public override IProcessorArchitecture Architecture
@@ -286,6 +286,16 @@ namespace Reko.UnitTests.Arch.Z80
                 "3|L--|bc = bc - 1",
                 "4|T--|if (bc == 0x0000) branch 0102",
                 "5|T--|if (Test(NE,Z)) branch 0100");
+        }
+
+        [Test]
+        public void Z80rw_rla()
+        {
+            BuildTest(0x17);
+            AssertCode(
+                "0|L--|0100(1): 2 instructions",
+                "1|L--|a = __rcl(a, 0x01, C)",
+                "2|L--|C = cond(a)");
         }
     }
 }

@@ -425,6 +425,7 @@ namespace Reko.Analysis
             private HashSet<Identifier> existingDefs;
             private HashSet<Statement> newPhiStatements;
             private int recursionGuard;
+            private int defPos;
 
             /// <summary>
             /// Walks the dominator tree, renaming the different definitions of variables
@@ -452,7 +453,18 @@ namespace Reko.Analysis
                     .Where(d => d != null)
                     .Select(d => d.Identifier));
                 this.newPhiStatements = newPhiStatements;
+                this.defPos = LastDefIndex(proc.EntryBlock.Statements) + 1;
 			}
+
+            private int LastDefIndex(StatementList stmts)
+            {
+                for (int i = stmts.Count-1; i >= 0; --i)
+                {
+                    if (stmts[i].Instruction is DefInstruction)
+                        return i;
+                }
+                return -1;
+            }
 
             /// <summary>
             /// Variables that are used before defining are "predefined" by adding a 
@@ -472,7 +484,8 @@ namespace Reko.Analysis
                         proc.EntryAddress.ToLinear(),
                         new DefInstruction(id),
                         entryBlock);
-                    entryBlock.Statements.Add(sid.DefStatement);
+                    entryBlock.Statements.Insert(defPos, sid.DefStatement);
+                    ++defPos;
                     existingDefs.Add(id);
                     return sid;
                 }
@@ -496,19 +509,15 @@ namespace Reko.Analysis
                 ++this.recursionGuard;
 				var wasonentry = new Dictionary<Identifier, Identifier>(rename);
 
-				// Rename variables in all blocks except the starting block which
-				// only contains dummy 'def' variables.
-
-				if (n != n.Procedure.EntryBlock)
+                // Rename variables in all blocks except the dummy 'def' variables in 
+                // the starting block.
+				foreach (Statement stm in n.Statements.ToArray())
 				{
-					foreach (Statement stm in n.Statements)
-					{
-						stmCur = stm;
-						stmCur.Instruction = stmCur.Instruction.Accept(this);
-					}
-                    if (n == n.Procedure.ExitBlock && this.addUseInstructions)
-                        AddUseInstructions(n);
+					stmCur = stm;
+					stmCur.Instruction = stmCur.Instruction.Accept(this);
 				}
+                if (n == n.Procedure.ExitBlock && this.addUseInstructions)
+                    AddUseInstructions(n);
 
 				// Rename arguments to phi functions in successor blocks.
 
@@ -792,7 +801,7 @@ namespace Reko.Analysis
 
                 if (c != null)
                 {
-                    var e = importResolver.ResolveToImportedProcedureConstant(stmCur, c);
+                    var e = importResolver.ResolveToImportedValue(stmCur, c);
                     if (e != null)
                         return e;
                 }

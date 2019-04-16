@@ -36,7 +36,7 @@ namespace Reko.Core
         ExternalProcedure ResolveProcedure(string moduleName, int ordinal, IPlatform platform);
         Expression ResolveImport(string moduleName, string globalName, IPlatform platform);
         Expression ResolveImport(string moduleName, int ordinal, IPlatform platform);
-        ProcedureConstant ResolveToImportedProcedureConstant(Statement stm, Constant c);
+        Expression ResolveToImportedValue(Statement stm, Constant c);
     }
 
     /// <summary>
@@ -50,12 +50,17 @@ namespace Reko.Core
         private readonly Project project;
         private readonly Program program;
         private readonly DecompilerEventListener eventListener;
+        private readonly Dictionary<string, ImageSymbol> localProcs;
 
         public ImportResolver(Project project, Program program, DecompilerEventListener eventListener)
         {
             this.project = project ?? throw new ArgumentNullException("project");
             this.program = program;
             this.eventListener = eventListener;
+            this.localProcs = program.ImageSymbols.Values
+                .Where(sym => sym.Name != null && sym.Type == SymbolType.Procedure)
+                .GroupBy(sym => sym.Name)
+                .ToDictionary(g => g.Key, g => g.First());
         }
 
         private void EnsureSignature(Program program, SystemService svc)
@@ -133,7 +138,19 @@ namespace Reko.Core
                 if (mod.ServicesByOrdinal.TryGetValue(ordinal, out var svc))
                 {
                     EnsureSignature(program, svc);
-                    return new ExternalProcedure(svc.Name, svc.Signature, svc.Characteristics);
+                    if (svc.Signature != null)
+                    {
+                        return new ExternalProcedure(svc.Name, svc.Signature, svc.Characteristics);
+                    }
+                    else
+                    {
+                        // We have a name for the external procedure, but can't find a proper signature for it. 
+                        // So we make a "dumb" one. It's better than nothing.
+                        eventListener.Warn(
+                            new NullCodeLocation(moduleName),
+                            "Unable to resolve signature for {0}", svc.Name);
+                        return new ExternalProcedure(svc.Name, new FunctionType());
+                    }
                 }
             }
             return platform.LookupProcedureByOrdinal(moduleName, ordinal);
@@ -231,19 +248,42 @@ namespace Reko.Core
             }
     }
 
-        [Obsolete()]
-        public ProcedureConstant ResolveToImportedProcedureConstant(Statement stm, Constant c)
+        public Expression ResolveToImportedValue(Statement stm, Constant c)
         {
             var addrInstruction = program.SegmentMap.MapLinearAddressToAddress(stm.LinearAddress);
             var addrImportThunk = program.Platform.MakeAddressFromConstant(c);
             if (!program.ImportReferences.TryGetValue(addrImportThunk, out var impref))
                 return null;
 
-            var extProc = impref.ResolveImportedProcedure(
-                this,
-                program.Platform,
-                new AddressContext(program, addrInstruction, this.eventListener));
-            return new ProcedureConstant(program.Platform.PointerType, extProc);
+            if (impref.SymbolType == SymbolType.Procedure)
+            {
+                if (!this.localProcs.TryGetValue(impref.EntryName, out var sym))
+                    return null;
+                if (! program.Procedures.TryGetValue(sym.Address, out var proc))
+                    return null;
+                return new ProcedureConstant(program.Platform.PointerType, proc);
+            }
+            else if (impref.SymbolType == SymbolType.Data)
+            {
+                // Read an address sized value at the given address.
+                if (!program.SegmentMap.TryFindSegment(impref.ReferenceAddress, out ImageSegment seg))
+                    return null;
+                var dt = program.Architecture.PointerType;
+                if (!program.Architecture.TryRead(seg.MemoryArea, impref.ReferenceAddress, dt, out Constant cIndirect))
+                    return Constant.Invalid;
+                return cIndirect;
+            }
+            else
+            {
+                //$TODO: need to work on imported data symbols
+                // for now, treat them as imported procedures.
+
+                var extProc = impref.ResolveImportedProcedure(
+                    this,
+                    program.Platform,
+                    new AddressContext(program, addrInstruction, this.eventListener));
+                return new ProcedureConstant(program.Platform.PointerType, extProc);
+            }
         }
     }
 }

@@ -86,7 +86,7 @@ namespace Reko.Scanning
         /// Processes the statements of a basic block by using the architecture-specific
         /// Rewriter to obtain a stream of low-level RTL instructions. RTL assignments are 
         /// simply added to the instruction list of the basic block. Jumps, returns, and 
-        /// calls to procedures that terminate the thread of executationresult in the 
+        /// calls to procedures that terminate the thread of execution result in the 
         /// termination of processing.
         /// </summary>
         public override void Process()
@@ -105,8 +105,6 @@ namespace Reko.Scanning
             while (rtlStream.MoveNext())
             {
                 this.ric = rtlStream.Current;
-                if (ric.Address.ToLinear() == 0x00B678)
-                    ric.ToString();
                 if (blockCur != scanner.FindContainingBlock(ric.Address))
                     break;  // Fell off the end of this block.
                 if (!ProcessRtlCluster(ric))
@@ -116,7 +114,7 @@ namespace Reko.Scanning
                 if (blNext != null)
                 {
                     EnsureEdge(blockCur.Procedure, blockCur, blNext);
-                    return;
+                    break;
                 }
                 blNext = FallenThroughNextBlock(addrInstrEnd);
                 if (blNext != null)
@@ -1250,6 +1248,11 @@ namespace Reko.Scanning
                 scanner.Error(ric.Address, string.Format("System service '{0}' didn't specify a signature.", svc.Name));
             }
             return svc;
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(BlockWorkitem)}: {base.Address}";
         }
     }
 }

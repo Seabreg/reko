@@ -6,8 +6,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-    <RootNamespace>WindowsDecompiler</RootNamespace>
-    <AssemblyName>WindowsDecompiler</AssemblyName>
+    <RootNamespace>Reko.WindowsDecompiler</RootNamespace>
+    <AssemblyName>Reko.WindowsDecompiler</AssemblyName>
     <ApplicationIcon />
     <OutputType>WinExe</OutputType>
     <StartupObject />

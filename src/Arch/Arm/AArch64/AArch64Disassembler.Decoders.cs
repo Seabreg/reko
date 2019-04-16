@@ -20,6 +20,7 @@
 
 using Reko.Core;
 using Reko.Core.Lib;
+using Reko.Core.Machine;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,8 +29,6 @@ using System.Text;
 
 namespace Reko.Arch.Arm.AArch64
 {
-    using Mutator = Func<uint, AArch64Disassembler, bool>;
-
     public partial class AArch64Disassembler
     {
         public abstract class Decoder
@@ -44,7 +43,7 @@ namespace Reko.Arch.Arm.AArch64
 
             protected void DumpMaskedInstruction(string tag, uint wInstr, uint shMask)
             {
-                //return;
+                return;
                 var hibit = 0x80000000u;
                 var sb = new StringBuilder();
                 for (int i = 0; i < 32; ++i)
@@ -114,15 +113,15 @@ namespace Reko.Arch.Arm.AArch64
 
             public override AArch64Instruction Decode(uint wInstr, AArch64Disassembler dasm)
             {
-                TraceDecoder(wInstr);
+                TraceDecoder(wInstr, tag);
                 uint op = Bitfield.ReadFields(bitfields, wInstr);
                 return decoders[op].Decode(wInstr, dasm);
             }
 
             [Conditional("DEBUG")]
-            public void TraceDecoder(uint wInstr)
+            public void TraceDecoder(uint wInstr, string tag = "")
             {
-                DumpMaskedInstruction("", wInstr, bitfields);
+                DumpMaskedInstruction(tag, wInstr, bitfields);
             }
         }
 
@@ -203,9 +202,9 @@ namespace Reko.Arch.Arm.AArch64
             private readonly Opcode opcode;
             private readonly InstrClass iclass;
             private readonly VectorData vectorData;
-            private readonly Mutator[] mutators;
+            private readonly Mutator<AArch64Disassembler>[] mutators;
 
-            public InstrDecoder(Opcode opcode, InstrClass iclass, VectorData vectorData, params Mutator[] mutators)
+            public InstrDecoder(Opcode opcode, InstrClass iclass, VectorData vectorData, params Mutator<AArch64Disassembler>[] mutators)
             {
                 this.opcode = opcode;
                 this.iclass = iclass;

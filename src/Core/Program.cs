@@ -30,6 +30,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Reko.Core.Lib;
 
 namespace Reko.Core
 {
@@ -56,7 +57,7 @@ namespace Reko.Core
             this.Architectures = new Dictionary<string, IProcessorArchitecture>();
             this.EntryPoints = new SortedList<Address, ImageSymbol>();
             this.ImageSymbols = new SortedList<Address, ImageSymbol>();
-            this.Procedures = new SortedList<Address, Procedure>();
+            this.Procedures = new BTreeDictionary<Address, Procedure>();
             this.CallGraph = new CallGraph();
             this.EnvironmentMetadata = new TypeLibrary();
             this.ImportReferences = new Dictionary<Address, ImportReference>(new Address.Comparer());		// uint (offset) -> string
@@ -214,14 +215,16 @@ namespace Reko.Core
         /// </returns>
         public virtual SymbolTable CreateSymbolTable()
         {
+            var dtSer = new DataTypeSerializer();
+            var primitiveTypes = PrimitiveType.AllTypes
+                .ToDictionary(d => d.Key, d => (PrimitiveType_v1) d.Value.Accept(dtSer));
             var namedTypes = new Dictionary<string, SerializedType>();
             var typedefs = EnvironmentMetadata.Types;
-            var dtSer = new DataTypeSerializer();
             foreach (var typedef in typedefs)
             {
-                namedTypes.Add(typedef.Key, typedef.Value.Accept(dtSer));
+                namedTypes[typedef.Key] = typedef.Value.Accept(dtSer);
             }
-            return new SymbolTable(Platform, namedTypes);
+            return new SymbolTable(Platform, primitiveTypes, namedTypes);
         }
 
         public ProcedureSerializer CreateProcedureSerializer()
@@ -289,7 +292,7 @@ namespace Reko.Core
         /// <summary>
         /// The program's decompiled procedures, ordereds by address.
         /// </summary>
-        public SortedList<Address, Procedure> Procedures { get; private set; }
+        public BTreeDictionary<Address, Procedure> Procedures { get; private set; }
 
         /// <summary>
         /// The program's pseudo procedures, indexed by name and by signature.
@@ -337,19 +340,26 @@ namespace Reko.Core
         public string GlobalsFilename { get; set; }
 
         /// <summary>
-        /// Policy to use when giving names to things.
+        /// The name of the directory in which embedded resources will be written.
         /// </summary>
-        public NamingPolicy NamingPolicy { get; set; }
+        public string ResourcesDirectory { get; set; }
 
         public void EnsureFilenames(string fileName)
         {
+            var dir = Path.GetDirectoryName(fileName) ?? "";
             this.DisassemblyFilename = DisassemblyFilename ?? Path.ChangeExtension(fileName, ".asm");
             this.IntermediateFilename = IntermediateFilename ?? Path.ChangeExtension(fileName, ".dis");
             this.OutputFilename = OutputFilename ?? Path.ChangeExtension(fileName, ".c");
             this.TypesFilename = TypesFilename ?? Path.ChangeExtension(fileName, ".h");
             this.GlobalsFilename = GlobalsFilename ?? Path.ChangeExtension(fileName, ".globals.c");
+            this.ResourcesDirectory = ResourcesDirectory ?? Path.Combine(dir, "resources");
         }
-       
+
+        /// <summary>
+        /// Policy to use when giving names to things.
+        /// </summary>
+        public NamingPolicy NamingPolicy { get; set; }
+
         // Convenience functions.
         public EndianImageReader CreateImageReader(IProcessorArchitecture arch, Address addr)
         {
@@ -449,7 +459,8 @@ namespace Reko.Core
             foreach (var kv in User.Globals)
             {
                 var dt = kv.Value.DataType.Accept(tlDeser);
-                var item = new ImageMapItem((uint)dt.Size)
+                var size = GetDataSize(Architecture, kv.Key, dt);
+                var item = new ImageMapItem(size)
                 {
                     Address = kv.Key,
                     DataType = dt,

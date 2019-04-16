@@ -305,6 +305,20 @@ namespace Reko.Evaluation
                 }
             }
 
+            // (rel (- c e) 0 => (rel -c e) => (rel.Negate e c)
+
+            if (binLeft != null && cRight != null && cRight.IsIntegerZero &&
+                IsIntComparison(binExp.Operator) &&
+                binLeft.Left is Constant cBinLeft &&
+                binLeft.Operator == Operator.ISub)
+            {
+                return new BinaryExpression(
+                    ((ConditionalOperator) binExp.Operator).Negate(),
+                    binExp.DataType,
+                    binLeft.Right,
+                    cBinLeft);
+            }
+
             // (rel (- e c1) c2) => (rel e c1+c2)
 
             if (binLeft != null && cLeftRight != null && cRight != null &&
@@ -563,7 +577,13 @@ namespace Reko.Evaluation
                 access.MemoryId,
                 access.EffectiveAddress.Accept(this),
                 access.DataType);
-            return ctx.GetValue(value, segmentMap);
+            var newValue = ctx.GetValue(value, segmentMap);
+            if (newValue != value)
+            {
+                ctx.RemoveExpressionUse(value);
+                ctx.UseExpression(newValue);
+            }
+            return newValue;
         }
 
         public virtual Expression VisitMkSequence(MkSequence seq)
@@ -575,25 +595,26 @@ namespace Reko.Evaluation
                     eNew = e;
                 return eNew;
             }).ToArray();
+            //$TODO: handle sequences of more than two consts. 
             if (newSeq.Length == 2)
             {
                 if (newSeq[0] is Constant c1 && newSeq[1] is Constant c2)
                 {
-                PrimitiveType tHead = (PrimitiveType)c1.DataType;
-                PrimitiveType tTail = (PrimitiveType)c2.DataType;
-                PrimitiveType t;
-                Changed = true;
-                if (tHead.Domain == Domain.Selector)			//$REVIEW: seems to require Address, SegmentedAddress?
-                {
-                    t = PrimitiveType.Create(Domain.Pointer, tHead.BitSize + tTail.BitSize);
-                    return ctx.MakeSegmentedAddress(c1, c2);
+                    PrimitiveType tHead = (PrimitiveType) c1.DataType;
+                    PrimitiveType tTail = (PrimitiveType) c2.DataType;
+                    PrimitiveType t;
+                    Changed = true;
+                    if (tHead.Domain == Domain.Selector)            //$REVIEW: seems to require Address, SegmentedAddress?
+                    {
+                        t = PrimitiveType.Create(Domain.Pointer, tHead.BitSize + tTail.BitSize);
+                        return ctx.MakeSegmentedAddress(c1, c2);
+                    }
+                    else
+                    {
+                        t = PrimitiveType.Create(tHead.Domain, tHead.BitSize + tTail.BitSize);
+                        return Constant.Create(t, (c1.ToUInt64() << tHead.BitSize) | c2.ToUInt64());
+                    }
                 }
-                else
-                {
-                    t = PrimitiveType.Create(tHead.Domain, tHead.BitSize + tTail.BitSize);
-                    return Constant.Create(t, c1.ToInt32() << tHead.BitSize | c2.ToInt32());
-                }
-            }
             }
             if (newSeq.Take(newSeq.Length-1).All(e => e.IsZero))
             {

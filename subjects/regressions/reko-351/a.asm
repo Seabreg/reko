@@ -3,6 +3,8 @@
 ;;; Segment .text (80000080)
 
 ;; deregister_tm_clones: 80000080
+;;   Called from:
+;;     8000012C (in __do_global_dtors_aux)
 deregister_tm_clones proc
 	link	a6,#$0000
 	move.l	#$80002724,d0
@@ -23,9 +25,12 @@ l800000A0:
 
 l800000AA:
 	unlk	a6
-	rts	
+	rts
 
 ;; register_tm_clones: 800000AE
+;;   Called from:
+;;     8000018A (in frame_dummy)
+;;     800001A0 (in frame_dummy)
 register_tm_clones proc
 	link	a6,#$0000
 	move.l	#$80002724,d0
@@ -54,7 +59,7 @@ l800000D4:
 
 l800000E0:
 	unlk	a6
-	rts	
+	rts
 
 ;; __do_global_dtors_aux: 800000E4
 __do_global_dtors_aux proc
@@ -84,7 +89,7 @@ l80000114:
 	bhi	$80000114
 
 l8000012C:
-	jsr.l	-$00AC(pc)                                           ; 80000080
+	jsr.l	80000080                                             ; -$00AC(pc)
 	lea	$00000000,a0
 	tst.l	a0
 	beq	$80000144
@@ -101,13 +106,13 @@ l8000014C:
 	move.l	-$0008(a6),d2
 	movea.l	-$0004(a6),a2
 	unlk	a6
-	rts	
+	rts
 
 ;; call___do_global_dtors_aux: 80000158
 call___do_global_dtors_aux proc
 	link	a6,#$0000
 	unlk	a6
-	rts	
+	rts
 
 ;; frame_dummy: 80000160
 frame_dummy proc
@@ -147,9 +152,11 @@ l80000198:
 call_frame_dummy proc
 	link	a6,#$0000
 	unlk	a6
-	rts	
+	rts
 
 ;; sine_taylor: 800001AC
+;;   Called from:
+;;     800004AA (in main)
 sine_taylor proc
 	link	a6,#$FFB0
 	fmove.d	$0008(a6),fp0
@@ -219,9 +226,12 @@ sine_taylor proc
 	move.l	d0,-(a7)
 	fmove.d	(a7)+,fp0
 	unlk	a6
-	rts	
+	rts
 
 ;; factorial: 8000033C
+;;   Called from:
+;;     800003FC (in sine_taylor)
+;;     80000454 (in sine_taylor)
 factorial proc
 	link	a6,#$FFF8
 	moveq	#$01,d0
@@ -244,9 +254,12 @@ l80000356:
 l8000036A:
 	move.l	-$0008(a6),d0
 	unlk	a6
-	rts	
+	rts
 
 ;; pow_int: 80000372
+;;   Called from:
+;;     800003EC (in sine_taylor)
+;;     80000444 (in sine_taylor)
 pow_int proc
 	link	a6,#$FFF4
 	move.l	#$3FF00000,-$000C(a6)
@@ -272,7 +285,7 @@ l800003A8:
 	move.l	d0,-(a7)
 	fmove.d	(a7)+,fp0
 	unlk	a6
-	rts	
+	rts
 
 ;; sine_taylor: 800003BC
 sine_taylor proc
@@ -292,11 +305,11 @@ l800003E0:
 	move.l	-$0004(a6),-(a7)
 	move.l	$000C(a6),-(a7)
 	move.l	$0008(a6),-(a7)
-	jsr.l	-$007A(pc)                                           ; 80000372
+	jsr.l	80000372                                             ; -$007A(pc)
 	lea	$000C(a7),a7
 	fmove.x	fp0,fp2
 	move.l	-$0004(a6),-(a7)
-	jsr.l	-$00C0(pc)                                           ; 8000033C
+	jsr.l	8000033C                                             ; -$00C0(pc)
 	addq.l	#$04,a7
 	fmove.l	d0,fp0
 	fmove.x	fp2,fp1
@@ -321,11 +334,11 @@ l80000438:
 	move.l	-$0004(a6),-(a7)
 	move.l	$000C(a6),-(a7)
 	move.l	$0008(a6),-(a7)
-	jsr.l	-$00D2(pc)                                           ; 80000372
+	jsr.l	80000372                                             ; -$00D2(pc)
 	lea	$000C(a7),a7
 	fmove.x	fp0,fp2
 	move.l	-$0004(a6),-(a7)
-	jsr.l	-$0118(pc)                                           ; 8000033C
+	jsr.l	8000033C                                             ; -$0118(pc)
 	addq.l	#$04,a7
 	fmove.l	d0,fp0
 	fmove.x	fp2,fp1
@@ -345,14 +358,14 @@ l80000480:
 	fmove.d	(a7)+,fp0
 	fmovem.x	-$0018(a6),fp2
 	unlk	a6
-	rts	
+	rts
 
 ;; main: 8000049A
 main proc
 	link	a6,#$FFFC
 	move.l	#$51EB851F,-(a7)
 	move.l	#$40091EB8,-(a7)
-	jsr.l	-$02FE(pc)                                           ; 800001AC
+	jsr.l	800001AC                                             ; -$02FE(pc)
 	addq.l	#$08,a7
 	move.l	a6,d0
 	subq.l	#$04,d0
@@ -365,9 +378,11 @@ main proc
 	lea	$0014(a7),a7
 	clr.l	d0
 	unlk	a6
-	rts	
+	rts
 
 ;; _sin: 800004DE
+;;   Called from:
+;;     800004CE (in main)
 _sin proc
 	link	a6,#$FFDC
 	move.l	$0008(a6),-$0008(a6)
@@ -443,7 +458,7 @@ l8000060E:
 	move.l	d0,-(a7)
 	fmove.d	(a7)+,fp0
 	unlk	a6
-	rts	
+	rts
 80000622       4E 71                                       Nq           
 
 ;; __do_global_ctors_aux: 80000624
@@ -466,13 +481,13 @@ l8000063C:
 l80000646:
 	movea.l	-$0004(a6),a2
 	unlk	a6
-	rts	
+	rts
 
 ;; call___do_global_ctors_aux: 8000064E
 call___do_global_ctors_aux proc
 	link	a6,#$0000
 	unlk	a6
-	rts	
+	rts
 ;;; Segment .fini (80000656)
 80000656                   4E B9 80 00 00 E4                   N.....   
 ;;; Segment .eh_frame (8000065C)

@@ -133,7 +133,7 @@ namespace Reko.Core.Expressions
                 binExp.Operator == Operator.FMul ||
                 binExp.Operator == Operator.FDiv)
             {
-                dt = PrimitiveType.Create(Domain.Real, dtLeft.BitSize);
+                dt = PrimitiveType.Create(Domain.Real, binExp.DataType.BitSize);
             }
             else if (binExp.Operator == Operator.Shr)
             {
@@ -436,7 +436,7 @@ namespace Reko.Core.Expressions
         public DataType VisitSlice(Slice slice)
         {
             slice.Expression.Accept(this);
-            return slice.DataType;
+            return RecordDataType(slice.DataType, slice);
         }
 
         public DataType VisitTestCondition(TestCondition tc)

@@ -42,7 +42,7 @@ namespace Reko.ImageLoaders.Elf.Relocators
         /// <remarks>
         /// According to the ELF PPC32 documentation, the .rela.plt and .plt tables 
         /// should contain the same number of entries, even if the individual entry 
-        /// sizes are distinct. The entries in .real.plt refer to symbols while the
+        /// sizes are distinct. The entries in .rela.plt refer to symbols while the
         /// entries in .plt are (writeable) pointers.  Any caller that jumps to one
         /// of pointers in the .plt table is a "trampoline", and should be replaced
         /// in the decompiled code with just a call to the symbol obtained from the
@@ -60,31 +60,31 @@ namespace Reko.ImageLoaders.Elf.Relocators
             for (int i = 0; i < rela_plt.EntryCount(); ++i)
             {
                 // Read the .rela.plt entry
-                uint offset;
-                if (!relaRdr.TryReadUInt32(out offset))
+                if (!relaRdr.TryReadUInt32(out uint offset))
                     return;
-                uint info;
-                if (!relaRdr.TryReadUInt32(out info))
+                if (!relaRdr.TryReadUInt32(out uint info))
                     return;
-                int addend;
-                if (!relaRdr.TryReadInt32(out addend))
+                if (!relaRdr.TryReadInt32(out int addend))
                     return;
 
                 // Read the .plt entry. We don't care about its contents,
                 // only its address. Anyone accessing that address is
                 // trying to access the symbol.
 
-                uint thunkAddress;
-                if (!pltRdr.TryReadUInt32(out thunkAddress))
+                if (!pltRdr.TryReadUInt32(out uint thunkAddress))
                     break;
 
                 uint sym = info >> 8;
                 string symStr = loader.GetSymbolName(rela_plt.LinkedSection, sym);
 
                 var addr = plt.Address + (uint)i * 4;
+                //$TODO: why is this relocator not like the others? This code needs 
+                // to be changed to us RelocateEntry like all other subclasses.
                 program.ImportReferences.Add(
                     addr,
-                    new NamedImportReference(addr, null, symStr));
+                    //$BUG: ExternalProcedure below should be using the symbol type. When
+                    // changing to use RelocateEntry this will go away.
+                    new NamedImportReference(addr, null, symStr, SymbolType.ExternalProcedure));
             }
         }
 

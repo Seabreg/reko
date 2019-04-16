@@ -299,7 +299,6 @@ namespace Reko.ImageLoaders.MzExe
             List<ProgramResource> items = rsrcLoader.Load();
             program.Resources.Resources.AddRange(items);
             program.Resources.Name = "PE resources";
-
             return program;
         }
 
@@ -847,13 +846,13 @@ void applyRelX86(uint8_t* Off, uint16_t Type, Defined* Sym,
                 if (!ImportedFunctionNameSpecified(rvaEntry))
                 {
                     return new OrdinalImportReference(
-                        addrThunk, dllName, (int)rvaEntry & 0xFFFF);
+                        addrThunk, dllName, (int)rvaEntry & 0xFFFF, SymbolType.ExternalProcedure);
                 }
                 else
                 {
                     string fnName = outer.ReadUtf8String((uint)rvaEntry + 2, 0);
                     return new NamedImportReference(
-                        addrThunk, dllName, fnName);
+                        addrThunk, dllName, fnName, SymbolType.ExternalProcedure);
                 }
             }
 

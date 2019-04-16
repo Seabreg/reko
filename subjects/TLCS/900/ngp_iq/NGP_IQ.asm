@@ -118,9 +118,7 @@ l002001A4:
 	ld	w,01
 	call	002004F2
 	ld	xwa,00007000
-	call	T,(xwa)
-
-l002001B1:
+	call	(xwa)
 	ld	hl,0D06
 	ld	a,(00004003)
 	ld	w,04
@@ -195,9 +193,7 @@ l00200256:
 	ld	w,01
 	call	002004F2
 	ld	xwa,00007000
-	call	T,(xwa)
-
-l00200263:
+	call	(xwa)
 	ld	hl,0D0A
 	ld	a,(00004003)
 	ld	w,04
@@ -273,9 +269,7 @@ l0020030A:
 	ld	w,01
 	call	002004F2
 	ld	xwa,00007000
-	call	T,(xwa)
-
-l00200317:
+	call	(xwa)
 	ld	hl,0D0E
 	ld	a,(00004003)
 	ld	w,04
@@ -328,6 +322,10 @@ l00200361:
 002004F0 68 FE                                           h.             
 
 ;; fn002004F2: 002004F2
+;;   Called from:
+;;     002001A6 (in fn00200089)
+;;     00200258 (in fn00200089)
+;;     0020030C (in fn00200089)
 fn002004F2 proc
 	push	xwa
 	ld	(00004004),00
@@ -344,6 +342,9 @@ l00200508:
 	ret
 
 ;; fn0020050A: 0020050A
+;;   Called from:
+;;     00200540 (in fn00200532)
+;;     0020054F (in fn00200532)
 fn0020050A proc
 	push	xhl
 	push	xde
@@ -356,15 +357,22 @@ fn0020050A proc
 	ld	h,00
 	mul	hl,0040
 	add	de,hl
-	ld	(xde),a
+	ld	a,(xde)
 	add	xde,00000001
-	ld	(xde),w
+	ld	w,(xde)
 	pop	xbc
 	pop	xde
 	pop	xhl
 	ret
 
 ;; fn00200532: 00200532
+;;   Called from:
+;;     002001BA (in fn00200089)
+;;     002001C5 (in fn00200089)
+;;     0020026C (in fn00200089)
+;;     00200277 (in fn00200089)
+;;     00200320 (in fn00200089)
+;;     0020032B (in fn00200089)
 fn00200532 proc
 	push	xhl
 	push	xbc
@@ -385,11 +393,29 @@ fn00200532 proc
 	ret
 
 ;; fn00200557: 00200557
+;;   Called from:
+;;     0020011C (in fn00200089)
+;;     00200141 (in fn00200089)
+;;     0020015F (in fn00200089)
+;;     00200179 (in fn00200089)
+;;     00200191 (in fn00200089)
+;;     002001E0 (in fn00200089)
+;;     002001F7 (in fn00200089)
+;;     00200211 (in fn00200089)
+;;     0020022B (in fn00200089)
+;;     00200243 (in fn00200089)
+;;     00200292 (in fn00200089)
+;;     002002A9 (in fn00200089)
+;;     002002C5 (in fn00200089)
+;;     002002DF (in fn00200089)
+;;     002002F7 (in fn00200089)
+;;     00200346 (in fn00200089)
+;;     0020035D (in fn00200089)
 fn00200557 proc
 	push	xhl
 	push	xde
 	sll	01,d
-	ld	(00004002),d
+	ld	d,(00004002)
 	ld	xde,00009800
 	ld	xwa,00000000
 	ld	a,c
@@ -418,9 +444,9 @@ l00200589:
 	ld	w,00
 	add	wa,0009
 	add	w,(00004002)
-	ld	(xde),a
+	ld	a,(xde)
 	inc	00000001,xde
-	ld	(xde),w
+	ld	w,(xde)
 	inc	00000001,xde
 	djnz	b,00200579
 
@@ -432,6 +458,8 @@ l0020059E:
 002005B0 88 CE C8 02 1B 32 05 20                         .....2.        
 
 ;; fn002005B8: 002005B8
+;;   Called from:
+;;     002000D7 (in fn00200089)
 fn002005B8 proc
 	ld	xbc,00009000
 	ld	hl,04C0
@@ -466,14 +494,14 @@ fn002005F5 proc
 	add	w,w
 	ld	xix,00FFFE00
 	ld	xix,(xwa+a)
-	call	T,(xix)
-
-l00200609:
+	call	(xix)
 	pop	xix
 	pop	sr
 	ret
 
 ;; fn0020060C: 0020060C
+;;   Called from:
+;;     00200089 (in fn00200089)
 fn0020060C proc
 	cp	(00006F91),00
 	jr	NZ,0020061C
